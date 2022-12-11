@@ -1,10 +1,12 @@
 import { Router } from 'express';
-import { getRentals, postRentals,  getRentalsById} from '../controllers/controllers.js';
+
+import { deleteRental, getRentals, getRentalsById, postRentals } from '../controllers/rentalsController.js';
 
 const router = Router();
 
 router.get("/rentals", getRentals);
 router.post("/rentals", postRentals);
 router.get("/rentals", getRentalsById);
+router.delete("/rentals/:id", deleteRental)
 
 export default router;
