@@ -2,12 +2,12 @@ import connection from '../database/db';
 import joi from 'joi';
 import dayjs from 'dayjs';
 
-export async function getRentals (req, res){
+export async function getRentals(req, res) {
     const { rows: rentals } = await connection.query('SELECT * FROM rentals');
     res.send(rentals);
 }
 
-export async function postRentals(req, res){
+export async function postRentals(req, res) {
     const newRental = req.body;
 
     const rentalSchema = joi.object({
@@ -25,12 +25,12 @@ export async function postRentals(req, res){
     const gameRented = await connection.query("SELECT * FROM rentals WHERE id = $1", [newRental.gameId]);
 
 
-    if (error){
+    if (error) {
         return res.sendStatus(400);
-    }else if (customerExistent.rows.length == 0 || gameExistent.rows.length == 0 || newRental.daysRented <= 0){
+    } else if (customerExistent.rows.length == 0 || gameExistent.rows.length == 0 || newRental.daysRented <= 0) {
         return res.sendStatus(400);
-    }else if(gameRented.returnDate){
-        if (gameRented.returnDate == null){
+    } else if (gameRented.returnDate) {
+        if (gameRented.returnDate == null) {
             return res.sendStatus(400);
         }
     }
@@ -47,31 +47,49 @@ export async function postRentals(req, res){
 
 }
 
-export async function getRentalsById (req, res){
-    const { id } = req.params;
-    const { rows: rental } = await connection.query('SELECT * FROM rentals WHERE id = $1', [id]);
-    res.send(rental);
-}
+export async function postRentalsById(req, res) {
+    try {
+        const id = parseInt(req.params.id);
+        let fees;
+        const responseRental = await connection.query(
+            'SELECT * FROM rentals WHERE id = $1',
+            [id]
+        );
+        if (responseRental.rows.length === 0) {
+            res.sendStatus(404);
+        }
+        const today = dayjs().format('YYYY-MM-DD');
+        const { rentDate, daysRented, returnDate, pricePerDay } =
+            responseRental.rows[0];
+        const lateDays = dayjs(today).diff(rentDate, 'day') - daysRented;
 
-export async function postReturn(req, res){
-    
-    const { id } = req.params;
-    const existent = await connection.query('SELECT * FROM rentals WHERE id = $1', [id]);
-    if (existent.rows.length !== 0){
-        const day = dayjs().format('YYYY/MM/DD')
-        await connection.query('UPDATE rentals SET returnDate = $1 WHERE id = $2', [day, id]);
-        return res.sendStatus(200);
+        if (lateDays <= 0) {
+            fees = 0;
+        } else {
+            fees = parseInt(lateDays) * parseInt(pricePerDay);
+        }
+        if (returnDate !== null) {
+            res.sendStatus(400);
+        } else {
+            const returning = await connection.query(
+                'UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3',
+                [today, fees, id]
+            );
+            res.sendStatus(200);
+        }
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
     }
+};
 
-}
-
-export async function deleteRental(req, res){
+export async function deleteRental(req, res) {
     const { id } = req.params;
     const existent = await connection.query('SELECT * FROM rentals WHERE id = $1', [id]);
-    if (existent.rows.length !== 0 && existent.rows.returnDate !== null){
+    if (existent.rows.length !== 0 && existent.rows.returnDate !== null) {
         await connection.query('DELETE * FROM rentals WHERE id = $1', [id]);
         return res.sendStatus(200);
-    }else{
+    } else {
         return res.sendStatus(400);
     }
 }

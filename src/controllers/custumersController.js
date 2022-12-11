@@ -38,3 +38,48 @@ export async function getCustomersById (req, res){
     const { rows: costumer } = await connection.query('SELECT * FROM customers WHERE id = $1', [id]);
     res.send(costumer)
 }
+export async function putCustomersById (req, res){
+    const validatingCustomer = req.body;
+    delete validatingCustomer.id;
+    const id = parseInt(req.params.id);
+    try {
+        const searchForID = await connection.query(
+            'SELECT * FROM customers WHERE id = $1',
+            [id]
+        );
+        if (searchForID.rows.length === 0) {
+            res.sendStatus(404);
+        } else {
+            const customerSchema = joi.object({
+                name: joi.string().min(1).required(),
+                phone: joi
+                    .string()
+                    .pattern(/^[0-9]+$/, 'numbers')
+                    .min(10)
+                    .max(11)
+                    .required(),
+                cpf: joi
+                    .string()
+                    .pattern(/^[0-9]+$/, 'numbers')
+                    .min(11)
+                    .max(11)
+                    .required(),
+                birthday: joi.date().required(),
+            });
+            const customer = customerSchema.validate(validatingCustomer);
+            if ('error' in customer) {
+                res.sendStatus(400);
+            } else {
+                const { name, phone, cpf, birthday } = validatingCustomer;
+                connection.query(
+                    'UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4 WHERE id = $5',
+                    [name, phone, cpf, birthday, id]
+                );
+                res.sendStatus(201);
+            }
+        }
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
+}
