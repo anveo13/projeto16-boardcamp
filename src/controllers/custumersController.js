@@ -2,8 +2,22 @@ import connection from '../database/db';
 import joi from 'joi';
 
 export async function getCustomers (req, res){
-    const { rows: customers } = await connection.query('SELECT * FROM customers');
-    res.send(customers);
+    const cpf = req.query.cpf;
+    try {
+        if (!cpf) {
+            const cpfs = await connection.query('SELECT * FROM customers');
+            res.send(cpfs.rows);
+        } else {
+            const cpfs = await connection.query(
+                'SELECT * FROM customers WHERE cpf = $1',
+                ['%' + cpf + '%']
+            );
+            res.send(cpfs.rows);
+        }
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
 }
 
 export async function postCustomers(req, res){
