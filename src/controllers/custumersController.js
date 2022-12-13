@@ -48,9 +48,21 @@ export async function postCustomers(req, res){
 }
 
 export async function getCustomersById (req, res){
-    const { id } = req.params;
-    const { rows: costumer } = await connection.query('SELECT * FROM customers WHERE id = $1', [id]);
-    res.send(costumer)
+    const id = parseInt(req.params.id);
+    try {
+        const searchForID = await connection.query(
+            'SELECT * FROM customers WHERE id = $1',
+            [id]
+        );
+        if (searchForID.rows.length === 0) {
+            res.sendStatus(404);
+        } else {
+            res.send(searchForID.rows[0]);
+        }
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
 }
 export async function putCustomersById (req, res){
     const validatingCustomer = req.body;

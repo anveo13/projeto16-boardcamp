@@ -85,11 +85,19 @@ export async function postRentalsById(req, res) {
 
 export async function deleteRental(req, res) {
     const { id } = req.params;
-    const existent = await connection.query('SELECT * FROM rentals WHERE id = $1', [id]);
-    if (existent.rows.length !== 0 && existent.rows.returnDate !== null) {
-        await connection.query('DELETE * FROM rentals WHERE id = $1', [id]);
-        return res.sendStatus(200);
+    const responseRental = await connection.query(
+        'SELECT * FROM rentals WHERE id = $1',
+        [id]
+    );
+    if (responseRental.rows.length === 0) {
+        res.sendStatus(404);
+    } else if (responseRental.rows[0].returnDate === null) {
+        res.sendStatus(400);
     } else {
-        return res.sendStatus(400);
+        const deleting = await connection.query(
+            'DELETE FROM rentals WHERE id = $1',
+            [id]
+        );
+        res.sendStatus(200);
     }
 }
